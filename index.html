@@ -146,16 +146,16 @@
 
 <script>
     // 🔗 1. LINK DA PLANILHA DOS ALUNOS
+    // IMPORTANTE: Se continuar dando erro, gere um novo link público em CSV na planilha de ALUNOS e substitua aqui embaixo:
     const URL_PLANILHA_ALUNOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQkcvnVFTlaGC14SKOVuxP0CqFnis8tsoWfAJ3lJ_yGJiLJ68CU2mPMaaZDC3i24w/pub?output=csv";
 
-    // 🔗 2. LINK DA PLANILHA DOS PROFESSORES (Corrigido o final para puxar os dados puros em CSV)
+    // 🔗 2. LINK DA PLANILHA DOS PROFESSORES (Este já sabemos que está funcionando 100%)
     const URL_PLANILHA_PROFESSORES = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSR5FJ9iAnITot2lBT9x4CKAUQC2l8yWmLKpZpBt4z9gNV9KxdUgqZrlTusPnr9TRXv6tWjvd3VF_MT/pub?output=csv";
 
-    let bancoDeDados = []; // Armazenará todos os alunos
+    let bancoDeDados = []; 
 
     // Função de login que consulta a planilha
     async function autenticarProfessor() {
-        // Remove pontos, traços e espaços inseridos pelo usuário no login
         const inputMatricula = document.getElementById("teacherMatricula").value.trim().replace(/[-\.\s]/g, "");
         const erroMsg = document.getElementById("errorMessage");
         const btnLogin = document.getElementById("btn-login");
@@ -166,28 +166,20 @@
             return;
         }
 
-        // Desativa o botão temporariamente para evitar cliques duplos
         btnLogin.disabled = true;
         btnLogin.textContent = "Carregando...";
         erroMsg.style.display = "none";
 
         try {
-            // Faz o download da planilha dos professores
             const resposta = await fetch(URL_PLANILHA_PROFESSORES);
             if (!resposta.ok) throw new Error("Não foi possível conectar à lista de professores.");
             
             const textoCSV = await resposta.text();
-            
-            // Extrai as matrículas limpando quaisquer formatações residuais vindas da planilha
             const matriculasCadastradas = processarCSVProfessores(textoCSV);
 
-            // Verifica se a matrícula digitada consta no cadastro limpo
             if (matriculasCadastradas.includes(inputMatricula)) {
-                // Sucesso! Esconde tela de login e abre o carômetro
                 document.getElementById("login-screen").style.display = "none";
                 document.getElementById("app-content").style.display = "block";
-                
-                // Começa a baixar a planilha de alunos agora que o acesso foi concedido
                 carregarDadosAlunos(); 
             } else {
                 erroMsg.textContent = "Matrícula não cadastrada no sistema!";
@@ -205,17 +197,15 @@
         }
     }
 
-    // Lê a planilha de professores e limpa pontos e traços também do que vem importado
     function processarCSVProfessores(texto) {
         const linhas = texto.split(/\r?\n/);
         const matriculasValidas = [];
-        const separador = linhas[0].includes(";") ? ";" : ",";
+        const separador = texto.includes(";") ? ";" : ",";
 
         for (let i = 1; i < linhas.length; i++) {
             if (!linhas[i].trim()) continue;
             const colunas = linhas[i].split(separador).map(c => c.trim().replace(/^"|"$/g, ''));
             
-            // Limpa formatações da primeira coluna (Matrícula)
             if (colunas[0]) {
                 const matriculaLimpa = colunas[0].replace(/[-\.\s]/g, "");
                 matriculasValidas.push(matriculaLimpa);
@@ -224,14 +214,12 @@
         return matriculasValidas;
     }
 
-    // Permite "Enter" para fazer o login
     function verificarTeclado(event) {
         if (event.key === "Enter") {
             autenticarProfessor();
         }
     }
 
-    // Função de formatação das fotos para link direto do Google Drive
     function formatarLinkFoto(idOriginal) {
         if (!idOriginal || idOriginal.trim() === "") return "";
         let id = idOriginal;
@@ -246,15 +234,14 @@
         return `https://lh3.googleusercontent.com/u/0/d/${id}`;
     }
 
-    // Processamento do CSV dos Alunos
     function processarCSVAlunos(texto) {
         const linhas = texto.split(/\r?\n/); 
         const resultados = [];
-        const separador = linhas[0].includes(";") ? ";" : ",";
+        const separador = texto.includes(";") ? ";" : ",";
 
         for (let i = 1; i < linhas.length; i++) {
             if (!linhas[i].trim()) continue;
-            const colunas = lines[i].split(separador).map(c => c.trim().replace(/^"|"$/g, ''));
+            const colunas = linhas[i].split(separador).map(c => c.trim().replace(/^"|"$/g, ''));
             if (colunas.length > 1) {
                 resultados.push({
                     nome: colunas[0] || "Sem Nome",
@@ -268,7 +255,6 @@
         return resultados;
     }
 
-    // Carrega a planilha de alunos após login efetuado com sucesso
     async function carregarDadosAlunos() {
         const container = document.getElementById("carometro-content");
         try {
@@ -296,12 +282,11 @@
             container.innerHTML = `
                 <div style="text-align: center; color: #e53e3e; padding: 50px;">
                     <p style="font-weight: bold; font-size: 18px;">Erro na leitura dos Alunos</p>
-                    <p style="margin-top: 10px; color: #4a5568; font-size: 15px;">Não conseguimos carregar a lista dos alunos.</p>
+                    <p style="margin-top: 10px; color: #4a5568; font-size: 15px;">Não conseguimos sincronizar com a sua Planilha de Alunos. Verifique se ela está publicada corretamente na Web como CSV.</p>
                 </div>`;
         }
     }
 
-    // Renderiza dinamicamente os cartões dos alunos na tela
     function changeClass(turmaSelecionada) {
         const container = document.getElementById("carometro-content");
         if (!turmaSelecionada) {
