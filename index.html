@@ -57,7 +57,7 @@
 
 <script>
     // 1. INSIRA AQUI O SEU LINK DO GOOGLE SHEETS PUBLICADO COMO CSV
-    const URL_PLANILHA = "https://docs.google.com/spreadsheets/d/1vjFI2geqACc9ecOF-zYlDvBxTlnMIXkc/edit?usp=drive_link&ouid=101554715743841405032&rtpof=true&sd=true";
+    const URL_PLANILHA = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQkcvnVFTlaGC14SKOVuxP0CqFnis8tsoWfAJ3lJ_yGJiLJ68CU2mPMaaZDC3i24w/pub?output=csv";
 
     let bancoDeDados = []; // Armazenará todos os alunos processados
 
@@ -82,34 +82,38 @@
         return `https://lh3.googleusercontent.com/u/0/d/${id}`;
     }
 
-    // 3. Função para processar o CSV (separando linhas e tratando aspas/ponto e vírgula)
-    function processarCSV(texto) {
-        const linhas = texto.split("\n");
-        const resultados = [];
+    // 3. Função para processar o CSV de forma mais segura
+function processarCSV(texto) {
+    const linhas = texto.split(/\r?\n/); // Trata quebras de linha do Windows e Linux
+    const resultados = [];
 
-        // O cabeçalho é a primeira linha
-        const cabecalho = linhas[0].split(",").map(c => c.trim().toLowerCase());
-
-        for (let i = 1; i < linhas.length; i++) {
-            if (!linhas[i].trim()) continue;
-            
-            // Divide as colunas respeitando vírgulas simples
-            const colunas = linhas[i].split(",").map(c => c.trim().replace(/^"|"$/g, ''));
-            
-            if (colunas.length > 1) {
-                // Mapeia os dados dinamicamente baseado na sua planilha
-                // Ajuste os índices [0], [1], [2], [3] de acordo com a ordem das colunas do seu Excel original
-                resultados.push({
-                    nome: colunas[0] || "Sem Nome",
-                    matricula: colunas[1] || "",
-                    turma: colunas[2] || "Sem Turma",
-                    turno: colunas[3] || "Integral", // Se sua planilha tiver turno, altere o índice
-                    fotoId: colunas[4] || "" // Substitua pelo índice correspondente à coluna com o ID/Link da foto
-                });
-            }
-        }
-        return resultados;
+    // Se o arquivo começar com código HTML (como "<!DOCTYPE html"), o link está errado!
+    if (texto.trim().startsWith("<!DOCTYPE") || texto.trim().startsWith("<html")) {
+        throw new Error("O link fornecido não é um CSV válido. É uma página web.");
     }
+
+    // Detecta se o seu Google Sheets está usando vírgula (,) ou ponto e vírgula (;)
+    const primeiraLinha = linhas[0];
+    const separador = primeiraLinha.includes(";") ? ";" : ",";
+
+    for (let i = 1; i < linhas.length; i++) {
+        if (!linhas[i].trim()) continue;
+        
+        // Divide as colunas usando o separador correto encontrado
+        const colunas = linhas[i].split(separador).map(c => c.trim().replace(/^"|"$/g, ''));
+        
+        if (colunas.length > 1) {
+            resultados.push({
+                nome: colunas[0] || "Sem Nome",
+                matricula: colunas[1] || "",
+                turma: colunas[2] || "Sem Turma",
+                turno: colunas[3] || "Integral",
+                fotoId: colunas[4] || "" 
+            });
+        }
+    }
+    return resultados;
+}
 
     // 4. Carrega a planilha automaticamente ao abrir o site
     async function carregarDados() {
